@@ -13,7 +13,6 @@ try:
     port=config["settings"]["port"]
     rx_freq=float(config["settings"]["rx_freq"])
     tx_freq=float(config["settings"]["tx_freq"])
-    sq_level=int(config["settings"]["sq_level"])
     volume=int(config["settings"]["volume"])    
 except:
     messagebox.showerror("Ошибка","Ошибка в ini-файле")
@@ -40,17 +39,15 @@ def handshake():
 def write_rx(): #AT+DMOSETGROUP=0,134.0000,171.8500,0000,1,0000
     write("AT+DMOSETGROUP=0,134.0000,")    
     write(str('%.4f' % rx_freq))
-    write(",0000,")
-    write(str(sq_level))
-    writeln(",0000")
+    writeln(",0000,0,0000")
+    time.sleep(0.5)
+    write("AT+DMOSETVOLUME=")
+    writeln(str(volume))
 
 def write_tx():        
     write("AT+DMOSETGROUP=0,")    
     write(str('%.4f' % tx_freq))
-    writeln(",174.0000,0000,1,0000")
-    time.sleep(0.5)
-    write("AT+DMOSETVOLUME=")
-    writeln(str(volume))
+    writeln(",174.0000,0000,0,0000")
 
 window = Tk()
 window.title(title)
@@ -69,6 +66,11 @@ ent_rx_freq.insert(0,rx_freq)
 btn_write_rx=Button(frm_rx,text="Записать RX",command=write_rx)
 lbl_rx_freq.pack()
 ent_rx_freq.pack()
+lbl_volume=Label(frm_rx,text="Volume:")
+lbl_volume.pack()
+ent_volume=Entry(frm_rx)                  
+ent_volume.insert(0,volume)
+ent_volume.pack()
 btn_write_rx.pack()
 frm_rx.pack()
 
