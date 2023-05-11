@@ -97,8 +97,8 @@ frm_monitor.pack()
 
 
 def loop1():
-    if ser.inWaiting()>0:
-        stx_monitor.insert(INSERT,ser.readline())                               
+    while(ser.inWaiting()>0):
+        stx_monitor.insert(INSERT,ser.read())                               
               
 
     
