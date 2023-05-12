@@ -13,6 +13,7 @@ try:
     port=config["settings"]["port"]
     rx_freq=float(config["settings"]["rx_freq"])
     tx_freq=float(config["settings"]["tx_freq"])
+    squelch=int(config["settings"]["squelch"])    
     volume=int(config["settings"]["volume"])    
 except:
     messagebox.showerror("Ошибка","Ошибка в ini-файле")
@@ -37,14 +38,20 @@ def handshake():
     writeln("AT+DMOCONNECT")
     
 def write_rx(): #AT+DMOSETGROUP=0,134.0000,171.8500,0000,1,0000
+    rx_freq=float(ent_rx_freq.get())
+    volume=int(ent_volume.get())
+    squelch=int(ent_squelch.get())
     write("AT+DMOSETGROUP=0,134.0000,")    
     write(str('%.4f' % rx_freq))
-    writeln(",0000,0,0000")
+    write(",0000,")
+    write(str(squelch))
+    writeln(",0000")    
     time.sleep(0.5)
     write("AT+DMOSETVOLUME=")
     writeln(str(volume))
 
-def write_tx():        
+def write_tx():
+    tx_freq=float(ent_tx_freq.get())
     write("AT+DMOSETGROUP=0,")    
     write(str('%.4f' % tx_freq))
     writeln(",174.0000,0000,0,0000")
@@ -71,6 +78,11 @@ lbl_volume.pack()
 ent_volume=Entry(frm_rx)                  
 ent_volume.insert(0,volume)
 ent_volume.pack()
+lbl_squelch=Label(frm_rx,text="Squelch:")
+lbl_squelch.pack()
+ent_squelch=Entry(frm_rx)                  
+ent_squelch.insert(0,squelch)
+ent_squelch.pack()
 btn_write_rx.pack()
 frm_rx.pack()
 
@@ -93,16 +105,9 @@ frm_monitor.pack()
 
 
 
-
-
-
 def loop1():
     while(ser.inWaiting()>0):
-        stx_monitor.insert(INSERT,ser.read())                               
-              
-
-    
-    
+        stx_monitor.insert(INSERT,ser.read())
 
     window.after(100, loop1)
     
