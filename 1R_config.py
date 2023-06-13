@@ -7,6 +7,8 @@ import serial
 import configparser
 import time
 
+com_port_opened = 0 #com port opened flag
+
 config = configparser.ConfigParser()  # создаём объекта парсера
 try:
     config.read("settings.ini")  # читаем конфиг    
@@ -16,13 +18,27 @@ try:
     squelch=int(config["settings"]["squelch"])    
     volume=int(config["settings"]["volume"])    
 except:
-    messagebox.showerror("Ошибка","Ошибка в ini-файле")
+    messagebox.showerror("Ошибка","Ошибка в файле settings.ini")
 
-try:
-    ser = serial.Serial(port,9600)
-except:
-    messagebox.showerror("Ошибка!","Не удалось открыть COM-порт "+port)
-    
+def write_settings():
+    config.set("settings","port",ent_com_port.get())
+    config.set("settings","rx_freq",ent_rx_freq.get())
+    config.set("settings","tx_freq",ent_tx_freq.get())
+    config.set("settings","squelch",ent_squelch.get())    
+    config.set("settings","volume",ent_volume.get())
+    with open("settings.ini", "w") as config_file:
+        config.write(config_file)
+
+def open_com_port():
+    global com_port_opened    
+    if(com_port_opened==0):
+        try:
+            global ser
+            ser = serial.Serial(ent_com_port.get(),9600)
+            com_port_opened=1
+        except:
+            messagebox.showerror("Ошибка!","Не удалось открыть COM-порт "+ent_com_port.get())
+            com_port_opened=0
 
 def writeln(s):
     ser.write(s.encode('ascii'))
@@ -35,9 +51,13 @@ def write(s):
     stx_monitor.insert(INSERT,s)
 
 def handshake():
+    open_com_port()
+    write_settings()
     writeln("AT+DMOCONNECT")
     
 def write_rx(): #AT+DMOSETGROUP=0,134.0000,171.8500,0000,1,0000
+    open_com_port()
+    write_settings()
     rx_freq=float(ent_rx_freq.get())
     volume=int(ent_volume.get())
     squelch=int(ent_squelch.get())
@@ -51,6 +71,8 @@ def write_rx(): #AT+DMOSETGROUP=0,134.0000,171.8500,0000,1,0000
     writeln(str(volume))
 
 def write_tx():
+    open_com_port()
+    write_settings()
     tx_freq=float(ent_tx_freq.get())
     write("AT+DMOSETGROUP=0,")    
     write(str('%.4f' % tx_freq))
@@ -62,23 +84,30 @@ window.title(title)
 window.title(title+" - "+port)
 
 frm_handshake=Frame(window)
-btn_handshake=Button(frm_handshake,text="Handshake",command=handshake)
+btn_handshake=Button(frm_handshake,text="Проверка программатора (подключите разъём). Должен быть ответ[+DMOCONNECT:0]",command=handshake)
 btn_handshake.pack()
 frm_handshake.pack()
 
+lbl_com_port=Label(frm_handshake,text="COM-порт (см.в диспетчере устройств):")
+ent_com_port=Entry(frm_handshake)                  
+ent_com_port.insert(0,port)
+lbl_com_port.pack()
+ent_com_port.pack()
+
+
 frm_rx=Frame(window)
-lbl_rx_freq=Label(frm_rx,text="RX freq:")
+lbl_rx_freq=Label(frm_rx,text="Частота приёма ретранслятора:")
 ent_rx_freq=Entry(frm_rx)                  
 ent_rx_freq.insert(0,rx_freq)
-btn_write_rx=Button(frm_rx,text="Записать RX",command=write_rx)
+btn_write_rx=Button(frm_rx,text="Запись настроек приёма (подключите разъём)",command=write_rx)
 lbl_rx_freq.pack()
 ent_rx_freq.pack()
-lbl_volume=Label(frm_rx,text="Volume(0-8):")
+lbl_volume=Label(frm_rx,text="Уровень модуляции ретранслятора (0-8):")
 lbl_volume.pack()
 ent_volume=Entry(frm_rx)                  
 ent_volume.insert(0,volume)
 ent_volume.pack()
-lbl_squelch=Label(frm_rx,text="Squelch(0-8):")
+lbl_squelch=Label(frm_rx,text="Чувствительность приёма ретранслятора (0-8):")
 lbl_squelch.pack()
 ent_squelch=Entry(frm_rx)                  
 ent_squelch.insert(0,squelch)
@@ -87,10 +116,10 @@ btn_write_rx.pack()
 frm_rx.pack()
 
 frm_tx=Frame(window)
-lbl_tx_freq=Label(frm_tx,text="TX freq:")
+lbl_tx_freq=Label(frm_tx,text="Частота передачи ретранслятора:")
 ent_tx_freq=Entry(frm_tx)                  
 ent_tx_freq.insert(0,tx_freq)
-btn_write_tx=Button(frm_tx,text="Записать TX",command=write_tx)
+btn_write_tx=Button(frm_tx,text="Запись настроек передачи (подключите разъём)",command=write_tx)
 lbl_tx_freq.pack()
 ent_tx_freq.pack()
 btn_write_tx.pack()
@@ -98,7 +127,7 @@ frm_tx.pack()
 
 frm_monitor=Frame(window)
 stx_monitor=scrolledtext.ScrolledText(frm_monitor,width = 50,height = 30)
-lbl_monitor=Label(frm_monitor,text="Монитор:")
+lbl_monitor=Label(frm_monitor,text="Монитор. [+DMOSETGROUP:0] - значит настройка прошла успешно")
 lbl_monitor.pack()
 stx_monitor.pack()
 frm_monitor.pack()
@@ -106,8 +135,10 @@ frm_monitor.pack()
 
 
 def loop1():
-    while(ser.inWaiting()>0):
-        stx_monitor.insert(INSERT,ser.read())
+    global com_port_opened
+    if(com_port_opened==1):
+        while(ser.inWaiting()>0):
+            stx_monitor.insert(INSERT,ser.read())
 
     window.after(100, loop1)
     
